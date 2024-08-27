@@ -2,6 +2,7 @@ package lock
 
 import (
 	"log"
+	"os"
 )
 
 const (
@@ -10,6 +11,7 @@ const (
 )
 
 var (
-	_gLogOut bool
-	_gLogger *log.Logger
+	_gLogOut        bool
+	_gDefaultLogger = log.New(os.Stdout, "", log.LstdFlags)
+	_gLogger        = _gDefaultLogger
 )

@@ -70,7 +70,7 @@ loopLock:
 
 func (l *ReinLock) tryReinLock(gid int) bool {
 	if l.gid.Load() == gid {
-		l.count += 1 //同一个线程,不可能同时进入 tryReinLock 和 Unlock,所以无需做原子操作保证
+		l.count += 1
 		return true
 	}
 
@@ -79,18 +79,17 @@ func (l *ReinLock) tryReinLock(gid int) bool {
 
 func (l *ReinLock) trySpinLock(gid int) bool {
 	if l.mu.TryLock() {
-		l.gid.Store(gid) //不可能2个线程同时到达这里
-		l.count = 1      //l.count 此时旧值必然为0
+		l.gid.Store(gid)
+		l.count = 1
 		return true
 	}
 	return false
 }
 
-// Unlock 应用层需要保证解锁协程就是加锁协程
 func (l *ReinLock) Unlock() {
 	l.count -= 1
 	if l.count == 0 {
-		l.gid.Store(0)
+		l.gid.Store(-1)
 		l.mu.Unlock()
 	}
 }

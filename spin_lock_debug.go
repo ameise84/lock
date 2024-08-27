@@ -15,6 +15,7 @@ type stack struct {
 	funcName string
 	line     int
 	gid      int
+	skip     int
 }
 
 type SpinLock struct {
@@ -39,7 +40,7 @@ func (l *SpinLock) LockSkip(n int) {
 		}
 		if _gLogOut {
 			t2 := time.Now()
-			if t2.Sub(t1).Seconds() > 2 {
+			if t2.Sub(t1).Seconds() > 5 {
 				t1 = t2
 				gid := getGID()
 				funcName, file, line, _ := runtime.Caller(n + 1)
@@ -69,7 +70,7 @@ func (l *SpinLock) TryLockInTime(dur time.Duration) bool {
 	isLocked := false
 loopLock:
 	for {
-		if l.tryLock(3) {
+		if l.tryLock(0) {
 			isLocked = true
 			break loopLock
 		}
@@ -85,6 +86,12 @@ loopLock:
 		if block < maxBlock {
 			block <<= 1
 		}
+	}
+
+	tr.Stop()
+	select {
+	case <-tr.C:
+	default:
 	}
 	return isLocked
 }
@@ -104,6 +111,6 @@ func (l *SpinLock) Unlock() {
 
 func (l *SpinLock) recordLockIndex(gid int, skip int) {
 	funcName, file, line, _ := runtime.Caller(3 + skip)
-	s := stack{file: file, funcName: runtime.FuncForPC(funcName).Name(), line: line, gid: gid}
+	s := stack{file: file, funcName: runtime.FuncForPC(funcName).Name(), line: line, gid: gid, skip: skip}
 	l.infos = append(l.infos, s)
 }

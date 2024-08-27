@@ -17,6 +17,8 @@ func CheckDead(ok bool, where string) {
 			_gLogOut = false
 			return
 		}
-		_gLogger = log.New(io.MultiWriter(file, os.Stdout), "", 0)
+		_gLogger = log.New(io.MultiWriter(file, os.Stdout), "", log.LstdFlags)
+	} else {
+		_gLogger = _gDefaultLogger
 	}
 }

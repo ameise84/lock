@@ -25,7 +25,7 @@ func (l *ReinLock) Lock() {
 	}
 	t1 := time.Now()
 	for {
-		if l.trySpinLock(gid) {
+		if l.trySpinLock(gid, 0) {
 			break
 		}
 
@@ -82,21 +82,25 @@ loopLock:
 			block <<= 1
 		}
 	}
+	tr.Stop()
+	select {
+	case <-tr.C:
+	default:
+	}
 	return isLocked
 }
 
 func (l *ReinLock) tryReinLock(gid int) bool {
 	if l.gid.Load() == gid {
 		l.count += 1 //同一个线程,不可能同时进入 tryReinLock 和 Unlock,所以无需做原子操作保证
-		l.mu.recordLockIndex(gid, 3)
+		l.mu.recordLockIndex(gid, 0)
 		return true
 	}
-
-	return l.trySpinLock(gid)
+	return l.trySpinLock(gid, 1)
 }
 
-func (l *ReinLock) trySpinLock(gid int) bool {
-	if l.mu.tryLock(5) {
+func (l *ReinLock) trySpinLock(gid int, skip int) bool {
+	if l.mu.tryLock(1 + skip) {
 		l.gid.Store(gid) //不可能2个线程同时到达这里
 		l.count = 1      //l.count 此时旧值必然为0
 		return true
@@ -104,10 +108,11 @@ func (l *ReinLock) trySpinLock(gid int) bool {
 	return false
 }
 
+// Unlock 调用者需要保证解锁协程就是加锁协程
 func (l *ReinLock) Unlock() {
 	l.count -= 1
 	if l.count == 0 {
-		l.gid.Store(0)
+		l.gid.Store(-1) //不会有-1的gid
 		l.mu.Unlock()
 	}
 }

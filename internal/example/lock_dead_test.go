@@ -6,7 +6,7 @@ import (
 )
 
 func TestLock(t *testing.T) {
-	lock.CheckDead(true, "aa")
+	lock.CheckDead(true, "test_lock_dead")
 	l := lock.SpinLock{}
 	l.Lock()
 	l.Unlock()
